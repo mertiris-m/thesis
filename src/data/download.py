@@ -1,18 +1,13 @@
-# thesis/src/data/download.py
 import requests
 from pathlib import Path
 from tqdm import tqdm
-import tarfile  
+import tarfile 
 
 """Downloading the datasets from their official source"""
 
 
-def download_qm9():
-    """
-    Downloads the complete QM9 dataset (133,885 molecules)
-    Data URL: https://springernature.figshare.com/ndownloader/files/3195389
-    Saves to: thesis/data/QM9/dsgdb9nsd.xyz
-    """
+def download_qm9(): # Downloads the QM9 Dataset to /data/QM9
+
     # URL for the dataset
     url = "https://springernature.figshare.com/ndownloader/files/3195389"
     
@@ -61,14 +56,8 @@ if __name__ == "__main__":
 
 
 
-def download_thermoML():
-    """
-    Downloads and extracts the NIST ThermoML dataset
-    Includes both the data archive and XSD schema file
-    Saves to: thesis/data/ThermoML/
-    Data URL: https://data.nist.gov/od/ds/mds2-2422/ThermoML.v2020-09-30.tgz
-    Schema URL: https://data.nist.gov/od/ds/mds2-2422/ThermoML.xsd
-    """
+def download_thermoML(): # Downloads the NIST ThermoML Dataset to /data/ThermoML
+    
     # URLs for the dataset and schema
     data_url = "https://data.nist.gov/od/ds/mds2-2422/ThermoML.v2020-09-30.tgz"
     schema_url = "https://data.nist.gov/od/ds/mds2-2422/ThermoML.xsd"
@@ -142,12 +131,8 @@ if __name__ == "__main__":
 
 
 
-def download_esol():
-    """
-    Downloads the Delaney (ESOL) dataset from DeepChem
-    Saves to: thesis/data/ESOL/delaney-processed.csv
-    Data URL: https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/delaney-processed.csv
-    """
+def download_esol(): # Downloads the ESOL Dataset to /data/ThermoML
+    
     url = "https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/delaney-processed.csv"
     
     # Path setup
@@ -193,3 +178,4 @@ def download_esol():
 
 if __name__ == "__main__":
     download_esol()
+
