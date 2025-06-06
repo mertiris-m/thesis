@@ -1,32 +1,35 @@
 import os
+from pathlib import Path
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import math
+from matplotlib.patches import Rectangle
+from scipy import stats
 
-"""QM9 dataset preprocess"""
 
-qm9_edit_root = os.path.join(os.path.dirname(__file__), '../../data/QM9_edit')
-os.makedirs(qm9_edit_root, exist_ok=True)
+""" QM9 dataset preprocess """
+
+root = Path.cwd().parent.parent if Path.cwd().name == "data" else Path.cwd()
+qm9_path = root / 'data' / 'QM9' / 'dsgdb9nsd.xyz'
+qm9_edit_dir = root / 'data' / 'QM9_edit'
+output_csv = qm9_edit_dir / 'QM9_edit.csv'
 
 
-def xyz_text_extractor(xyz_text):
-    """
-    Safely extracts properties from QM9 .xyz text with validation.
-    Returns: (smiles, dipole_moment, U, H, G, Cv) or None if invalid
-    """
+os.makedirs(qm9_edit_dir, exist_ok=True)
+
+
+
+def xyz_text_extractor(xyz_text): # Extracts properties from QM9, returns smiles,
+                                  # dipole_moment, U, H, G, Cv or None if invalid
 
     lines = [line.strip() for line in xyz_text.split('\n') if line.strip()]
     
-    # Basic validation
     if len(lines) < 3:  # Need at least: atom count + props + 1 atom
         print("Invalid file: too few lines")
         return None
     
-    # # Get number of atoms from first line
-    # try:
-    #     num_atoms = int(lines[0])
-    # except ValueError:
-    #     print("Invalid atom count")
-    #     return None
-    
-        """Index: 1) gdbg tag
+        """Index:1) gdbg tag
               2) iter count
               3) A Rotational constant
               4) B Rotational constant
@@ -56,7 +59,7 @@ def xyz_text_extractor(xyz_text):
         print(f"Invalid property line (only {len(prop_line)} values)")
         return None
     
-    # SMILES extraction (second-to-last line)
+    # SMILES extraction, second-to-last line
     try:
         smiles = lines[-2].split()[0]
     except (IndexError, ValueError):
@@ -65,7 +68,7 @@ def xyz_text_extractor(xyz_text):
     
 
     try:
-        # Indices are fixed per QM9 spec
+        # Indices are fixed in place
         dipole_moment = float(prop_line[5])    # Index 6 
         U = float(prop_line[13])      # Index 14
         H = float(prop_line[14])       # Index 15
@@ -86,6 +89,7 @@ def xyz_text_extractor(xyz_text):
 
 
 def process_qm9_directory(input_dir, output_csv):
+    
     os.makedirs(os.path.dirname(output_csv), exist_ok=True)
     valid_files = 0
     skipped_files = 0
@@ -105,9 +109,126 @@ def process_qm9_directory(input_dir, output_csv):
             if props:
                 smiles, dipole_moment, U, H, G, Cv = props
                 f_out.write(f"{smiles},{dipole_moment:.6f},{U:.6f},{H:.6f},{G:.6f},{Cv:.6f}\n")
+                # 6 decimal percision on QM9
                 valid_files += 1
             else:
                 skipped_files += 1
     
     print(f"Processed {valid_files} valid files, skipped {skipped_files} invalid files")
 
+
+
+""" Data exploration """
+
+plt.style.use('seaborn-v0_8-paper')  
+
+
+def load_data(csv_path):
+
+    df = pd.read_csv(csv_path)
+    print(f"Loaded {len(df)} molecules")
+    return df
+
+
+
+
+def visualize_histogram(df, bins=120):
+
+    numerics = df.select_dtypes(include='number')
+    columns = numerics.columns
+    num_cols = len(columns)
+
+    # Layout configuration
+    cols = 3
+    rows = math.ceil(num_cols / cols)
+
+    # Plotting
+    fig, axes = plt.subplots(rows, cols, figsize=(6 * cols, 4 * rows))
+    axes = axes.flatten()
+
+    for i, col in enumerate(columns):
+        ax = axes[i]
+        ax.hist(df[col], bins=bins, alpha=0.8)
+        ax.set_title(f'Histogram of {col}', fontsize=12)
+        ax.set_xlabel(col)
+        ax.set_ylabel('Frequency')
+        ax.grid(True, linestyle='--', alpha=0.5)
+
+    # Hide any unused axes
+    for j in range(i + 1, len(axes)):
+        fig.delaxes(axes[j])
+
+    plt.style.use('seaborn-v0_8-paper')
+    plt.tight_layout()
+    plt.show()
+
+
+
+def outlier_detection(df, rate=1.5): # Outlier removal using IQR method
+    
+    numerics = df.select_dtypes(include=['number']).columns
+    outlier_mask = pd.Series(False, index=df.index)
+
+    for col in numerics:
+        q1 = df[col].quantile(0.25)
+        q3 = df[col].quantile(0.75)
+        iqr = q3 - q1
+        lower = q1 - rate*iqr
+        upper = q3 + rate*iqr
+
+        col_outliers = (df[col] < lower) | (df[col] > upper)
+        outlier_mask = outlier_mask | col_outliers
+        print(f"Column {col} has {col_outliers.sum()} outliers. Lower cuttof: {lower:.3f}. Upper cutoff: {upper:.3f}")
+
+    df_clean = df[~outlier_mask].drop_duplicates()
+    df_outliers = df[outlier_mask].drop_duplicates()
+
+    return df_clean, df_outliers
+
+
+
+def visualize_outliers_boxplot(df):
+    numerics = df.select_dtypes(include=['number'])
+    
+    plt.figure(figsize=(12, 6))
+    plt.boxplot([df[col] for col in numerics.columns], vert=True, labels=numerics.columns)
+    plt.title('Boxplots of Numeric Columns')
+    plt.ylabel('Value')
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.style.use('seaborn-v0_8-paper')
+    plt.tight_layout()
+    plt.show()
+
+
+def visualize_outliers_histograms(df_clean, df_outliers):
+
+    numerics = df_clean.select_dtypes(include=['number']).columns
+    num_cols = len(numerics)
+
+    # Determine subplot grid size
+    cols = 2
+    rows = math.ceil(num_cols / cols)
+
+    fig, axes = plt.subplots(rows, cols, figsize=(12, 4 * rows))
+    axes = axes.flatten()
+
+    for i, col in enumerate(numerics):
+        ax = axes[i]
+        ax.hist(df_clean[col], bins=100, alpha=0.8, label='Clean')
+
+        if not df_outliers.empty:
+            ax.hist(df_outliers[col], bins=30, alpha=0.8, label='Outliers', color='red')
+
+        ax.set_title(f'Histogram of {col}')
+        ax.set_xlabel(col)
+        ax.set_ylabel('Frequency')
+        ax.legend()
+        ax.grid(True, linestyle='--', alpha=0.5)
+
+    # Hide any unused subplots
+    for j in range(i + 1, len(axes)):
+        fig.delaxes(axes[j])
+    
+    plt.style.use('seaborn-v0_8-paper')
+    plt.tight_layout()
+    plt.show()

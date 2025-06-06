@@ -15,10 +15,8 @@ def download_qm9(): # Downloads the QM9 Dataset to /data/QM9
     project_root = Path(__file__).parent.parent.parent
     output_path = project_root / "data" / "QM9" / "dsgdb9nsd.xyz"
     
-    # Create directory if needed
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Check if file exists
     if output_path.exists():
         print(f"QM9 Dataset already exists at:\n{output_path.resolve()}")
         return True  # Return status
@@ -42,10 +40,10 @@ def download_qm9(): # Downloads the QM9 Dataset to /data/QM9
                     f.write(chunk)
                     pbar.update(len(chunk))
         
-        print("✅ Download completed successfully!")
+        print("Download completed successfully!")
         return True
     except Exception as e:
-        print(f"❌ Download failed: {e}")
+        print(f"Download failed: {e}")
         if output_path.exists():
             output_path.unlink()
             print("Removed partial download")
@@ -62,13 +60,11 @@ def download_thermoML(): # Downloads the NIST ThermoML Dataset to /data/ThermoML
     data_url = "https://data.nist.gov/od/ds/mds2-2422/ThermoML.v2020-09-30.tgz"
     schema_url = "https://data.nist.gov/od/ds/mds2-2422/ThermoML.xsd"
     
-    # Path setup
     project_root = Path(__file__).parent.parent.parent
     output_dir = project_root / "data" / "ThermoML"
     archive_path = output_dir / "ThermoML.tgz"
     schema_path = output_dir / "ThermoML.xsd"
     
-    # Create directory if needed
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Check if files already exist
@@ -79,16 +75,14 @@ def download_thermoML(): # Downloads the NIST ThermoML Dataset to /data/ThermoML
         return True
 
     try:
-        # Download schema file
         print("Downloading ThermoML schema...")
         with requests.get(schema_url, stream=True) as r:
             r.raise_for_status()
             with open(schema_path, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=8192):
                     f.write(chunk)
-        print(f"✅ Schema saved to: {schema_path}")
+        print(f"Schema saved to: {schema_path}")
 
-        # Download main dataset
         print(f"\nDownloading ThermoML dataset to:\n{archive_path}")
         with requests.get(data_url, stream=True) as r:
             r.raise_for_status()
@@ -106,19 +100,18 @@ def download_thermoML(): # Downloads the NIST ThermoML Dataset to /data/ThermoML
                     pbar.update(len(chunk))
         
         # Extract the .tgz file
-        print("\n✅ Download complete, now extracting...")
+        print("\nDownload complete, now extracting...")
         with tarfile.open(archive_path, 'r:gz') as tar:
             tar.extractall(path=output_dir)
         
         # Clean up
         archive_path.unlink()
-        print(f"\n✅ Extraction complete! Files saved to:\n{output_dir.resolve()}")
+        print(f"\nExtraction complete! Files saved to:\n{output_dir.resolve()}")
         print(f"Total XML files: {len(list(output_dir.glob('*.xml')))}")
         return True
         
     except Exception as e:
-        print(f"\n❌ Download failed: {e}")
-        # Clean up any partial files
+        print(f"\nDownload failed: {e}")
         if archive_path.exists():
             archive_path.unlink()
         if schema_path.exists():
@@ -135,20 +128,16 @@ def download_esol(): # Downloads the ESOL Dataset to /data/ThermoML
     
     url = "https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/delaney-processed.csv"
     
-    # Path setup
     project_root = Path(__file__).parent.parent.parent
     output_dir = project_root / "data" / "ESOL"
     output_path = output_dir / "delaney-processed.csv"
     
-    # Create directory if needed
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Check if file exists
     if output_path.exists():
         print(f"Dataset already exists at:\n{output_path.resolve()}")
         return True
 
-    # Download with progress bar
     print(f"Downloading ESOL dataset to:\n{output_path}")
     
     try:
@@ -167,10 +156,10 @@ def download_esol(): # Downloads the ESOL Dataset to /data/ThermoML
                     f.write(chunk)
                     pbar.update(len(chunk))
         
-        print("✅ Download completed successfully!")
+        print("Download completed successfully!")
         return True
     except Exception as e:
-        print(f"❌ Download failed: {e}")
+        print(f"Download failed: {e}")
         if output_path.exists():
             output_path.unlink()
             print("Removed partial download")
