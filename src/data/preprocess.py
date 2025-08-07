@@ -372,6 +372,7 @@ def smiles_to_graph(smiles_string, target_values):
     """
 
     mol = Chem.MolFromSmiles(smiles_string)
+
     if mol is None:
         return None
     
@@ -424,8 +425,10 @@ def convert_smiles_to_graph(df, cols, output_dir, filename):
     graph_list = []
 
     for _, row in tqdm(df.iterrows(), total=df.shape[0]):
-        target_values = row[cols].values
+        target_values = [row[cols]] 
+
         graph = smiles_to_graph(row['SMILES'], target_values)
+        
         if graph is not None:
             graph_list.append(graph)
     
