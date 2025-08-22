@@ -11,6 +11,8 @@ import torch
 from rdkit import Chem
 from torch_geometric.data import Data
 from tqdm import tqdm
+import json
+from mordred import Calculator, descriptors
 
 
 """ QM9 dataset preprocess """
@@ -304,8 +306,10 @@ def get_atom_features(atom):
     Generates a feature vector for an atom.
     Features are one-hot encoded where necessary.
     """
+
+    node_features = []
     
-    # List of possible values for hybridization
+    # List of possible values for hybridization and geometries
     possible_hybridizations = [Chem.rdchem.HybridizationType.S,
                                Chem.rdchem.HybridizationType.SP,
                                Chem.rdchem.HybridizationType.SP2,
@@ -314,29 +318,41 @@ def get_atom_features(atom):
                                Chem.rdchem.HybridizationType.SP3D,
                                Chem.rdchem.HybridizationType.SP3D2]
     
-    features = []
+    possible_geometries = [Chem.rdchem.ChiralType.CHI_ALLENE,
+                           Chem.rdchem.ChiralType.CHI_OCTAHEDRAL,
+                           Chem.rdchem.ChiralType.CHI_SQUAREPLANAR,
+                           Chem.rdchem.ChiralType.CHI_TETRAHEDRAL,
+                           Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CCW,
+                           Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CW,
+                           Chem.rdchem.ChiralType.CHI_TRIGONALBIPYRAMIDAL]
+    
     # 1. Atomic Number
-    features.append(atom.GetAtomicNum())
+    node_features.append(atom.GetAtomicNum())
     
     # 2. One-hot encode hybridization
     hybridization = atom.GetHybridization()
     hybridization_encoding = [1.0 if h == hybridization else 0.0 for h in possible_hybridizations]
+    node_features.extend(hybridization_encoding)
 
-    features.extend(hybridization_encoding)
+    # 3. One-hot encode geometry
+    geometry = atom.GetChiralTag()
+    geometry_encoding = [1.0 if g == geometry else 0.0 for g in possible_geometries]
+    node_features.extend(geometry_encoding)
 
-    # 3. Numerical features
-    features.append(atom.GetDegree()) # returns the explicit degree of the Atom.
+    # 4. Numerical features
+    node_features.append(atom.GetValence(Chem.ValenceType.EXPLICIT)) # Returns the explicit valence of the atom.
+    node_features.append(atom.GetDegree()) # Returns the explicit degree of the atom.
                                       # The degree of an atom is defined to be its number of directly-bonded neighbors.
                                       # The degree is independent of bond orders, but is dependent on whether or not Hs are explicit in the graph.
-    features.append(atom.GetFormalCharge()) # Returns the formal charge for the molecule
-    features.append(atom.GetNumRadicalElectrons()) # returns the number of radical electrons for this Atom
-    features.append(atom.GetTotalNumHs()) # returns the total number of Hs (hydrogens) (implicit and explicit) that this Atom is bound to 
+    node_features.append(atom.GetFormalCharge()) # Returns the formal charge for the molecule
+    node_features.append(atom.GetNumRadicalElectrons()) # Returns the number of radical electrons for this atom
+    node_features.append(atom.GetTotalNumHs()) # Returns the total number of Hs (hydrogens) (implicit and explicit) that this atom is bound to 
     
-    # 4. Boolean features
-    features.append(float(atom.GetIsAromatic())) # whether the atom is aromatic
-    features.append(float(atom.IsInRing())) # Returns whether or not the bond is in a ring of any size
+    # 5. Boolean features
+    node_features.append(float(atom.GetIsAromatic())) # Returns whether the atom is aromatic.
+    node_features.append(float(atom.IsInRing())) # Returns whether or not the bond is in a ring of any size.
 
-    return features
+    return node_features
 
 
 def get_bond_features(bond):
@@ -344,24 +360,105 @@ def get_bond_features(bond):
     Generates a feature vector for a bond.
     Features are one-hot encoded.
     """
+
+    edge_features = []
+
     # List of interesting values for bond types
     possible_bond_types = [Chem.rdchem.BondType.SINGLE,
                            Chem.rdchem.BondType.DOUBLE,
                            Chem.rdchem.BondType.TRIPLE,
-                        #    Chem.rdchem.BondType.DATIVE,
-                        #    Chem.rdchem.BondType.IONIC,
+                           Chem.rdchem.BondType.DATIVE,
+                           Chem.rdchem.BondType.IONIC,
                            Chem.rdchem.BondType.AROMATIC]
     
     # 1. One-hot encode bond type
     bt = bond.GetBondType()
     bond_type_encoding = [1.0 if b == bt else 0.0 for b in possible_bond_types]
-    
-    # 2. Boolean features
-    is_aromatic = float(bond.GetIsAromatic())
-    is_in_ring = float(bond.IsInRing())
-    
-    return bond_type_encoding + [is_aromatic, is_in_ring]
+    edge_features.extend(bond_type_encoding)
 
+    # 2. Boolean features
+    edge_features.append(float(bond.GetIsAromatic()))
+    edge_features.append(float(bond.IsInRing()))
+    edge_features.append(float(bond.GetIsConjugated())) # Returns whether or not the bond is considered to be conjugated.
+
+    return edge_features
+
+
+def get_feature_names():
+    """
+    Generates and returns the node and edge feature names.
+    """
+    
+    node_names = []
+    node_names.append('AtomicNum')
+    possible_hybridizations = ['S',
+                               'SP',
+                               'SP2',
+                               'SP2D',
+                               'SP3',
+                               'SP3D',
+                               'SP3D2']
+    node_names.extend([f'Hybridization_{h}' for h in possible_hybridizations])
+    possible_geometries = ['ALLENE',
+                           'OCTAHEDRAL',
+                           'SQUAREPLANAR',
+                           'TETRAHEDRAL',
+                           'TETRAHEDRAL_CCW',
+                           'TETRAHEDRAL_CW',
+                           'TRIGONALBIPYRAMIDAL']
+    node_names.extend([f'Chiral_{g}' for g in possible_geometries])
+    node_names.extend(['ExplicitValence ',
+                       'Degree',
+                       'FormalCharge',
+                       'NumRadicalElectrons',
+                       'TotalNumHs',
+                       'IsAromatic',
+                       'IsInRing'])
+    
+
+    edge_names = []
+    possible_bond_types = ['SINGLE',
+                           'DOUBLE',
+                           'TRIPLE',
+                           'DATIVE',
+                           'IONIC',
+                           'AROMATIC']
+    edge_names.extend([f'BondType_{bt}' for bt in possible_bond_types])
+    edge_names.extend(['IsAromatic', 'IsInRing', 'IsConjugated'])
+
+
+    mordred_calculator = Calculator(descriptors, ignore_3D=True)
+    global_feature_names = [str(d) for d in mordred_calculator.descriptors]
+
+    return node_names, edge_names, global_feature_names
+
+
+def save_feature_names(results_dir, filename):
+    """
+    Saves the node, edge and global feature names into a json.
+    """
+
+    os.makedirs(results_dir, exist_ok=True)
+    
+    print("Extracting feature names...")
+    node_names, edge_names, global_names = get_feature_names()
+    
+    feature_names = {
+        'node_features': node_names,
+        'edge_features': edge_names,
+        'global_features': global_names
+    }
+    
+    names_filename = f'{filename}.json'
+    names_filepath = os.path.join(results_dir, names_filename)
+    
+    with open(names_filepath, 'w') as f:
+        json.dump(feature_names, f, indent=4)
+        
+    print(f"Node, edge and global feature names saved to '{names_filepath}'")
+
+
+# ------------- Graph Conversion Functions without Globals ------------- 
 
 def smiles_to_graph(smiles_string, target_values):
     """
@@ -391,10 +488,9 @@ def smiles_to_graph(smiles_string, target_values):
         edge_index = torch.tensor(edge_indices, dtype=torch.long).t().contiguous()
         edge_attr = torch.tensor(edge_attrs, dtype=torch.float)
     else:
+        _, edge_names, _ = get_feature_names()
         edge_index = torch.empty((2, 0), dtype=torch.long)
-        edge_attr = torch.empty((0, len(get_bond_features(None)) if mol.GetNumBonds() > 0 else 6))
-        
-
+        edge_attr = torch.empty((0, len(edge_names)))
     
     y = torch.tensor(np.array(target_values, dtype=np.float32)).view(1, -1)
     data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
@@ -407,20 +503,22 @@ def convert_smiles_to_graph(df, cols, output_dir, filename):
     Converts a dataframe of SMILES strings to a PyTorch Geometric
     data object and saves it.
 
-    It expects a 'SMILES' column. For each row For each row, it
-    generates a graph using the SMILES string and its corresponding
-    target (property) values. Saves to a .pt containing all
-    graphs from the dataframe in the output directory.
+    For each row, it generates a graph using the SMILES
+    string and its corresponding target (property) values.
+    Saves to a .pt containing all graphs from the dataframe
+    in the output directory.
     
     Args:
-        df (pd.DataFrame): The dataframe to convert.
+        df (pd.DataFrame): DataFrame containing a 'SMILES' column.
         cols (List[str]): A list of column names for the target (property) values.
         output_dir (str): The path to the directory to save the file.
-        filename (str): The filename (must include .pt at the end, e.g. qm9_dataset.pt).
+        filename (str): The filename excluding the extension .pt.
     """
-    
+
     os.makedirs(output_dir, exist_ok=True) 
-    output_filename = os.path.join(output_dir, filename)
+    dataset_filename = f'{filename}.pt'
+    dataset_filepath = os.path.join(output_dir, dataset_filename)
+    
     print(f"\nConverting SMILES to Graph...")
     graph_list = []
 
@@ -432,7 +530,170 @@ def convert_smiles_to_graph(df, cols, output_dir, filename):
         if graph is not None:
             graph_list.append(graph)
     
-    torch.save(graph_list, output_filename)
+    torch.save(graph_list, dataset_filepath)
     
     print(f"\nSuccessfully converted {len(graph_list)}/{len(df)} SMILES strings.")
-    print(f"\nDataset saved successfully to '{output_filename}'")
+    print(f"\nDataset saved successfully to '{dataset_filepath}'")
+
+
+# ------------- Graph Conversion Functions with Globals -------------
+
+
+def save_global_features(df, output_dir, filename, batch_size=5000): # made with A.I.
+    """
+    Calculates Mordred descriptors for all SMILES in a DataFrame in batches
+    and saves them to a single JSON file in the results directory.
+    
+    Args:
+        df (pd.DataFrame): DataFrame containing a 'SMILES' column.
+        output_dir (str): The path to the directory to save the file.
+        filename (str): The filename excluding the extension .json.
+        batch_size (int): Number of molecules to process in each batch.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    output_filename = f'{filename}.json'
+    output_filepath = os.path.join(output_dir, output_filename)
+    
+    print(f"Calculating global features in batches of {batch_size}...")
+    
+    calc = Calculator(descriptors, ignore_3D=True)
+    num_batches = (len(df) // batch_size) + 1
+    
+    all_descriptors = []
+    failed_indices = []
+
+    for i in tqdm(range(num_batches), desc="Calculating Mordred Descriptors"):
+        start_idx = i * batch_size
+        end_idx = start_idx + batch_size
+        df_batch = df.iloc[start_idx:end_idx]
+
+        if df_batch.empty:
+            continue
+            
+        mols_batch = [Chem.MolFromSmiles(s) for s in df_batch['SMILES']]
+        
+        # calc.map is robust and returns results or error objects
+        results = calc.map(mols_batch, quiet=True)
+        
+        for idx, desc_series in enumerate(results):
+            original_index = df_batch.index[idx]
+            if isinstance(desc_series, Exception):
+                # If calculation failed, record the index and append NaNs
+                failed_indices.append(original_index)
+                all_descriptors.append([np.nan] * len(calc.descriptors))
+            else:
+                # Convert descriptor values to a list of floats, handling potential non-float types
+                values = [float(v) if isinstance(v, (int, float)) else np.nan for v in desc_series.values()]
+                all_descriptors.append(values)
+                
+    if failed_indices:
+        print(f"\nWarning: Mordred calculation failed for {len(failed_indices)} molecules.")
+        print(f"Indices of failed molecules: {failed_indices}")
+    
+    print(f"\nSaving {len(all_descriptors)} global feature vectors to '{output_filepath}'...")
+    with open(output_filepath, 'w') as f:
+        json.dump(all_descriptors, f)
+        
+    print("Global features saved successfully.")
+    
+
+
+def smiles_to_graph_with_globals(smiles_string, target_values, global_features):
+    """
+    Generates a graph with atom and bond features from 
+    get_atom_features, get_bond_features and appends the
+    target values (property value) to the y tensor of the
+    PyTorch Geometric Data class. Also uses global features.
+    """
+
+    mol = Chem.MolFromSmiles(smiles_string)
+
+    if mol is None:
+        return None
+    
+    atom_features = [get_atom_features(atom) for atom in mol.GetAtoms()]
+    x = torch.tensor(atom_features, dtype=torch.float)
+
+    u = torch.tensor(global_features, dtype=torch.float).view(1,-1)
+    
+    if mol.GetNumBonds() > 0:
+        edge_indices, edge_attrs = [], []
+        for bond in mol.GetBonds():
+            i, j = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
+            bond_feats = get_bond_features(bond)
+            edge_indices.extend([(i, j), (j, i)])
+            edge_attrs.extend([bond_feats, bond_feats])
+        
+        edge_index = torch.tensor(edge_indices, dtype=torch.long).t().contiguous()
+        edge_attr = torch.tensor(edge_attrs, dtype=torch.float)
+    else:
+        _, edge_names, _ = get_feature_names()
+        edge_index = torch.empty((2, 0), dtype=torch.long)
+        edge_attr = torch.empty((0, len(edge_names)))
+        
+    y = torch.tensor(np.array(target_values, dtype=np.float32)).view(1, -1)
+    data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y, u=u)
+    
+    return data
+
+
+
+def convert_smiles_to_graph_with_globals(df, cols, output_dir, filename,  global_feat_path):
+    """
+    Converts a dataframe of SMILES strings to a PyTorch Geometric
+    data object and saves it.
+
+    For each row, it generates a graph using the SMILES
+    string and its corresponding target (property) values.
+    Saves to a .pt containing all graphs from the dataframe
+    in the output directory.
+
+    Adds global features from a pre-calculated json file.
+    
+    Args:
+        df (pd.DataFrame): DataFrame containing a 'SMILES' column.
+        cols (List[str]): A list of column names for the target (property) values.
+        global_feat_path (str): Path to the global features JSON.
+        output_dir (str): The path to the directory to save the file.
+        filename (str): The filename excluding the extension .pt.
+    """
+
+    os.makedirs(output_dir, exist_ok=True) 
+    dataset_filename = f'{filename}.pt'
+    dataset_filepath = os.path.join(output_dir, dataset_filename)
+
+    print(f"Loading pre-calculated global features from '{global_feat_path}'...")
+    try:
+        with open(global_feat_path, 'r') as f:
+            all_global_features = json.load(f)
+    except FileNotFoundError:
+        print(f"ERROR: Global features file not found!")
+        print("Please run `calculate_and_save_global_features` first.")
+        return
+
+    if len(all_global_features) != len(df):
+        print("ERROR: Mismatch between number of molecules in DataFrame and global features file.")
+        return
+    
+    print("\nConverting SMILES to Graph with global features...")
+    graph_list = []
+
+    # Use tqdm to iterate with the index
+    for idx, row in tqdm(df.iterrows(), total=df.shape[0]):
+        target_values = [row[cols]] 
+        
+        # Get the corresponding global features for this molecule by index
+        global_features = all_global_features[idx]
+
+        # Handle potential NaNs from failed calculations by replacing them with 0
+        global_features = [0.0 if np.isnan(v) else v for v in global_features]
+        
+        graph = smiles_to_graph_with_globals(row['SMILES'], target_values, global_features)
+        
+        if graph is not None:
+            graph_list.append(graph)
+    
+    torch.save(graph_list, dataset_filepath)
+    
+    print(f"\nSuccessfully converted {len(graph_list)}/{len(df)} SMILES strings.")
+    print(f"Dataset saved successfully to '{dataset_filepath}'")
