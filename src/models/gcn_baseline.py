@@ -58,23 +58,3 @@ class GCN_baseline(nn.Module):
         out = self.fc_block(x_pooled)
         
         return out
-
-# --- Example from ethane results ---
-
-
-num_node_features = 14
-num_properties = 3
-hidden_dimension = 128 # DimeNet default
-dropout = 0.2
-
-# Instantiate the baseline model
-model = GCN_baseline(
-    node_features=num_node_features,
-    hidden_dim=hidden_dimension,
-    output_dim=num_properties,
-    dropout_rate=dropout
-)
-
-print("----- Baseline GCN Model Architecture -----")
-print(model)
-print("\nModel created successfully and ready to be used.")

@@ -1,0 +1,34 @@
+{
+    "Dipole_moment": [
+        {
+            "hidden_dim": 256,
+            "dropout_rate": 0.08508955253060713,
+            "lr": 0.00030778113117545903,
+            "fold_index": 0
+        },
+        {
+            "hidden_dim": 256,
+            "dropout_rate": 0.12142534078340902,
+            "lr": 0.00030697964527993395,
+            "fold_index": 1
+        },
+        {
+            "hidden_dim": 256,
+            "dropout_rate": 0.09310583013336887,
+            "lr": 0.0003536708919952163,
+            "fold_index": 2
+        },
+        {
+            "hidden_dim": 128,
+            "dropout_rate": 0.15990855298810752,
+            "lr": 0.0005602743212524079,
+            "fold_index": 3
+        },
+        {
+            "hidden_dim": 128,
+            "dropout_rate": 0.13268931539155854,
+            "lr": 0.0004915405580086878,
+            "fold_index": 4
+        }
+    ]
+}

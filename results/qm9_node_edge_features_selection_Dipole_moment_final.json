@@ -1,0 +1,42 @@
+{
+    "Dipole_moment": {
+        "node_features_index": [
+            0,
+            2,
+            3,
+            5,
+            8,
+            9,
+            11,
+            12,
+            13
+        ],
+        "node_features_selected_names": [
+            "AtomicNum",
+            "Hybridization_SP",
+            "Hybridization_SP2",
+            "Hybridization_SP3",
+            "Chiral_ALLENE",
+            "Chiral_OCTAHEDRAL",
+            "Chiral_TETRAHEDRAL",
+            "Chiral_TETRAHEDRAL_CCW",
+            "Chiral_TETRAHEDRAL_CW"
+        ],
+        "edge_features_index": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+        ],
+        "edge_features_selected_names": [
+            "BondType_SINGLE",
+            "BondType_DOUBLE",
+            "BondType_TRIPLE",
+            "BondType_DATIVE",
+            "BondType_IONIC",
+            "BondType_AROMATIC"
+        ]
+    }
+}

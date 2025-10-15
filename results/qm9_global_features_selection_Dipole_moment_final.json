@@ -1,0 +1,14 @@
+{
+    "Dipole_moment": {
+        "global_features_index": [
+            2,
+            22,
+            647
+        ],
+        "global_features_selected_names": [
+            "nAcid",
+            "nHetero",
+            "BCUTs-1h"
+        ]
+    }
+}

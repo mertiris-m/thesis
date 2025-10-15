@@ -1,0 +1,28 @@
+{
+    "Dipole_moment": {
+        "node_features_importances": {
+            "AtomicNum": 12.034553527832031,
+			"Hybridization_S": 0.015605008229613304,
+			"Hybridization_SP": 2.2023401260375977,
+			"Hybridization_SP2": 9.782289505004883,
+			"Hybridization_SP2D": 0.015465868636965752,
+			"Hybridization_SP3": 9.010351181030273,
+			"Hybridization_SP3D": 0.015947531908750534,
+			"Hybridization_SP3D2": 0.015893900766968727,
+			"Chiral_ALLENE": 17.211698532104492,
+			"Chiral_OCTAHEDRAL": 7.906383514404297,
+			"Chiral_SQUAREPLANAR": 0.016931580379605293,
+			"Chiral_TETRAHEDRAL": 16.262615203857422,
+			"Chiral_TETRAHEDRAL_CCW": 4.365387916564941,
+			"Chiral_TETRAHEDRAL_CW": 6.780669212341309
+        },
+        "edge_features_importances": {
+            "BondType_SINGLE": 15.16816520690918,
+            "BondType_DOUBLE": 12.403237342834473,
+            "BondType_TRIPLE": 3.6362221240997314,
+            "BondType_DATIVE": 6.308440208435059,
+            "BondType_IONIC": 7.132767677307129,
+            "BondType_AROMATIC": 18.635892868041992
+        }
+    }
+}

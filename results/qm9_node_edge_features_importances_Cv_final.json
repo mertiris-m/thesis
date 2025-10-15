@@ -1,0 +1,28 @@
+{
+    "Cv": {
+        "node_features_importances": {
+            "AtomicNum": NaN,
+            "Hybridization_S": NaN,
+            "Hybridization_SP": NaN,
+            "Hybridization_SP2": NaN,
+            "Hybridization_SP2D": NaN,
+            "Hybridization_SP3": NaN,
+            "Hybridization_SP3D": NaN,
+            "Hybridization_SP3D2": NaN,
+            "Chiral_ALLENE": NaN,
+            "Chiral_OCTAHEDRAL": NaN,
+            "Chiral_SQUAREPLANAR": NaN,
+            "Chiral_TETRAHEDRAL": NaN,
+            "Chiral_TETRAHEDRAL_CCW": NaN,
+            "Chiral_TETRAHEDRAL_CW": NaN
+        },
+        "edge_features_importances": {
+            "BondType_SINGLE": NaN,
+            "BondType_DOUBLE": NaN,
+            "BondType_TRIPLE": NaN,
+            "BondType_DATIVE": NaN,
+            "BondType_IONIC": NaN,
+            "BondType_AROMATIC": NaN
+        }
+    }
+}

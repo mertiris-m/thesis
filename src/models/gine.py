@@ -93,23 +93,3 @@ class GINE(nn.Module):
         return out
     
 
-# --- Example from ethane results ---
-
-num_node_features = 14
-num_edge_features = 6
-num_properties = 3
-hidden_dimension = 128 # DimeNet default
-dropout = 0.2
-
-# Instantiate the model
-model = GINE(
-    node_features=num_node_features,
-    edge_features=num_edge_features,
-    hidden_dim=hidden_dimension,
-    output_dim=num_properties,
-    dropout_rate=dropout
-)
-
-print("----- GINE Model Architecture -----")
-print(model)
-print("\nModel created successfully and ready to be used.")

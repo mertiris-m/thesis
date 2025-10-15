@@ -293,7 +293,7 @@ def qm9_scaler(df, scaler_dir): # Scales QM9 dataframe using MinMaxScaler
         print(f"{col} column minimum value: {df[col].min()}")
 
         # Save each scaler
-        joblib.dump(scaler, os.path.join(scaler_dir, f'{col}_QM9_scaler.pkl'))
+        joblib.dump(scaler, os.path.join(scaler_dir, f'qm9_scaler_{col}.pkl'))
 
     return df, scalers
 
@@ -444,9 +444,9 @@ def save_feature_names(results_dir, filename):
     node_names, edge_names, global_names = get_feature_names()
     
     feature_names = {
-        'node_features': node_names,
-        'edge_features': edge_names,
-        'global_features': global_names
+        'node_features_names': node_names,
+        'edge_features_names': edge_names,
+        'global_features_names': global_names
     }
     
     names_filename = f'{filename}.json'
@@ -521,6 +521,10 @@ def convert_smiles_to_graph(df, cols, output_dir, filename):
     
     print(f"\nConverting SMILES to Graph...")
     graph_list = []
+
+    # Ensure 'cols' is a list, even if it's a single string
+    if isinstance(cols, str):
+        target_values = row[cols].values
 
     for _, row in tqdm(df.iterrows(), total=df.shape[0]):
         target_values = [row[cols]] 
@@ -678,9 +682,13 @@ def convert_smiles_to_graph_with_globals(df, cols, output_dir, filename,  global
     print("\nConverting SMILES to Graph with global features...")
     graph_list = []
 
+    # Ensure 'cols' is a list, even if it's a single string
+    if isinstance(cols, str):
+        cols = [cols]
+    
     # Use tqdm to iterate with the index
     for idx, row in tqdm(df.iterrows(), total=df.shape[0]):
-        target_values = [row[cols]] 
+        target_values = row[cols].values 
         
         # Get the corresponding global features for this molecule by index
         global_features = all_global_features[idx]
